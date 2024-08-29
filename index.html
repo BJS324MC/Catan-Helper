@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Catan Helper</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+</head>
+
+<body>
+    <canvas></canvas>
+    <div id="interface">
+        <h1>Board Panel</h1>
+        <p id="hexName">Hex (0,0)</p>
+        <p id="valueLabel">Value: 11</p>
+        <input type="range" id="value" value="11" min="-1" max="12">
+        <select id="resources">
+            <option value="brick">Brick</option>
+            <option value="desert">Desert</option>
+            <option value="ore">Ore</option>
+            <option value="sheep">Sheep</option>
+            <option value="wheat">Wheat</option>
+            <option value="wood" selected>Wood</option>
+            <option value="none">None</option>
+        </select>
+        <button id="toggle">Toggle Total Tacks</button>
+        <button id="loadSave">Load Save</button>
+    </div>
+    <script src='main.js'></script>
+</body>
+
+</html>

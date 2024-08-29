@@ -1,0 +1,25 @@
+html, body{
+    margin:0;
+    font-family: Arial;
+}
+canvas{
+    margin: 0;
+    position: fixed;
+}
+h1{
+    margin: 0;
+}
+#interface{
+    display: flex;
+    position: absolute;
+    user-select:none;
+    color: white;
+    padding:10px;
+    top:30%;
+    left:10%;
+    flex-direction: column;
+    background:rgba(104, 97, 45, 0.3)
+}
+#interface p {
+    margin:0;
+}
