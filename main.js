@@ -19,10 +19,10 @@ class HexList {
         this.resourceGuide = {
             'brick': 'red',
             'wood': 'green',
-            'sheep': 'lightgreen',
+            'sheep': 'gold',
             'wheat': 'yellow',
             'ore': 'lightblue',
-            'desert': 'gold',
+            'desert': 'lightgreen',
             'none': 'rgba(255,255,255,0)',
             'hover': 'rgba(0,0,0,0.2)',
             'selected': 'rgba(211, 189, 225,0.3)'
@@ -44,7 +44,18 @@ class HexList {
             let [hx, hy] = coords.split(',').map(a => +a);
             this.neighbours[coords] = this.getNeighbours(hx, hy);
         }
-        this.corners = this.getAllCorners().sort((a, b) => b[2] - a[2]);
+        this.corners = this.getAllCorners();
+        quickSort(this.corners, n => -n[2]);
+    }
+    isOdd(corner) {
+        return corner[0] % 3 === 1 || corner[0] % 3 === -2;
+    }
+    areAdjacentCorners(cornerA, cornerB) {
+        let C1 = this.isOdd(cornerA), C2 = this.isOdd(cornerB);
+        if (C1 === C2) return false;
+        let oddCorner = C1 ? cornerA : cornerB, evenCorner = C1 ? cornerB : cornerA;
+        return (oddCorner[0] - this.r === evenCorner[0] && oddCorner[1] === evenCorner[1]) ||
+            (oddCorner[0] + this.r / 2 === evenCorner[0] && (approximatelyEqual(oddCorner[1] + this.h * this.r / 2, evenCorner[1]) || approximatelyEqual(oddCorner[1] - this.h * this.r / 2, evenCorner[1])))
     }
     getHex(x, y) {
         return this.hexes[`${x},${y}`] || null;
@@ -52,13 +63,13 @@ class HexList {
     getNeighbours(x, y) {
         let neighbours = [];
         for (let i = -1; i < 2; i++) for (let j = -1; j < 2; j++) if (i !== j) neighbours.push(this.getHex(x + i, y + j));
-        return [neighbours[0], neighbours[2], neighbours[4], neighbours[5], neighbours[3], neighbours[1]].map(a => a !== null ? a[1] : null); // top left hex clockwise
+        return [neighbours[0], neighbours[2], neighbours[4], neighbours[5], neighbours[3], neighbours[1]]; // top left hex clockwise
     }
     getTotalTacks(x, y, n) { // top left point clockwise
         let neighbours = this.neighbours[`${x},${y}`], hex = this.getHex(x, y);
-        if (n > 5 || !hex) return 0;
-        else if (n === 5) return this.sumHexes(neighbours[5], neighbours[0], hex[1]);
-        else return this.sumHexes(neighbours[n], neighbours[n + 1], hex[1]);
+        if (n > 5) return 0;
+        else if (n === 5) return this.sumHexes(neighbours[5], neighbours[0], hex);
+        else return this.sumHexes(neighbours[n], neighbours[n + 1], hex);
     }
     getAllCorners() {
         let corners = [];
@@ -76,19 +87,24 @@ class HexList {
         }
         return corners;
     }
-    drawCorners(ctx) {
-        for (let corner of this.corners) {
-            let [x, y, v] = corner;
-            x += innerWidth / 2;
-            y += innerHeight / 2;
-            ctx.beginPath();
-            ctx.fillStyle = corner[2] > 9 ? 'rgba(138, 43, 226,0.7)' : 'rgba(49, 211, 152, 0.8)';
-            ctx.arc(x, y, 20, 0, Math.PI * 2);
+    drawAllCorners(ctx) {
+        for (let i = 0; i < this.corners.length; i++) this.drawCorner(ctx, this.corners[i], i);
+    }
+    drawCorner(ctx, corner, i = 0) {
+        let [x, y, v] = corner;
+        x += innerWidth / 2;
+        y += innerHeight / 2;
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(49, 211, 152, 0.8)';
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        if (i < 10) {
+            ctx.fillStyle = `rgba(138, 43, 226,${1 - 0.7 * (i + 1) / 10})`;
             ctx.fill();
-            ctx.fillStyle = corner[2] > 9 ? 'rgb(235, 193, 226)' : 'rgb(49, 111, 152)';
-            ctx.font = '15px Arial';
-            ctx.fillText(v, x, y + 5);
         }
+        ctx.fillStyle = i < 10 ? 'rgb(235, 193, 226)' : 'rgb(49, 111, 152)';
+        ctx.font = '15px Arial';
+        ctx.fillText(v, x, y + 5);
     }
     drawHex(ctx, hx, hy, resource, value) {
         let r = this.r,
@@ -152,10 +168,10 @@ class HexList {
                 vx -= r;
                 break;
         }
-        return [vx, vy, this.getTotalTacks(x, y, n)];
+        return [vx, vy, ...this.getTotalTacks(x, y, n)];
     }
     sumHexes(...hexes) {
-        return hexes.reduce((a, b) => b === null ? a : a + this.tackGuide[b], 0);
+        return [hexes.map(a => a !== null ? a[1] : null).reduce((a, b) => b === null ? a : a + this.tackGuide[b], 0), ...hexes];
     }
     draw(ctx) {
         let hx, hy;
@@ -165,6 +181,47 @@ class HexList {
         };
     }
 }
+const approximatelyEqual = (a, b, dp = 12) => a.toFixed(dp) === b.toFixed(dp),
+    partition = (arr, fn, low, high) => {
+        const pivot = fn(arr[high]);
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+            if (fn(arr[j]) < pivot) {
+                i++;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+        return i + 1;
+    },
+    quickSort = (arr, fn = n => n, low = 0, high = arr.length - 1) => {
+        if (low < high) {
+            const pi = partition(arr, fn, low, high);
+            quickSort(arr, fn, low, pi - 1);
+            quickSort(arr, fn, pi + 1, high);
+        }
+    },
+    sortByResources = (resources, scaleFactors = { 'brick': 2, 'wood': 2, 'sheep': 2, 'wheat': 2, 'ore': 2 }) => {
+        quickSort(board.corners, n =>
+            (n[3] ? -board.tackGuide[n[3][1]] * (resources.some(resource => n[3][0] === resource) ? scaleFactors[n[3][0]] : 1) : 0) +
+            (n[4] ? -board.tackGuide[n[4][1]] * (resources.some(resource => n[4][0] === resource) ? scaleFactors[n[4][0]] : 1) : 0) +
+            (n[5] ? -board.tackGuide[n[5][1]] * (resources.some(resource => n[5][0] === resource) ? scaleFactors[n[5][0]] : 1) : 0))
+    },
+    getOptimalSetup = (...taken) => {
+        /**
+         * Sort based on:
+         * Balance
+         * Total Production
+         */
+        //sortByResources([])
+        let result = [];
+        for(let c = 0; c < 1; c++){
+            let N = [board.corners[c]];
+            for (let i = 0; i < board.corners.length && N.length < 7; i++) if (i !== c && N.concat(taken).every(corner => !board.areAdjacentCorners(corner, board.corners[i]))) N.push(board.corners[i]);
+            result.push(N)
+        }
+        return result;
+    };
 
 let board = new HexList({
     '0,0': ['wood', 11], '-1,0': ['desert', -1], '0,-1': ['wood', 6], '1,-1': ['brick', 3],
@@ -174,6 +231,8 @@ let board = new HexList({
     '-2,2': ['sheep', 8], '-2,1': ['ore', 10], '-2,0': ['brick', 9]
 }),
     selectedHex = [0, 0, 'brick', 11],
+    displayCorners = getOptimalSetup(),
+    displayN = 0,
     showCorners = false,
     coordsBegin = null,
     pwidth = 0,
@@ -231,7 +290,8 @@ const canvas = document.querySelector('canvas'),
         board.draw(ctx, showCorners);
         board.drawHex(ctx, ...hovered, 'hover', -1);
         board.drawHex(ctx, selectedHex[0], selectedHex[1], 'selected', -1);
-        if (showCorners) board.drawCorners(ctx);
+        if (showCorners) board.drawAllCorners(ctx);
+        for (let corner of displayCorners[displayN]) board.drawCorner(ctx, corner);
         ctx.restore();
         requestAnimationFrame(frame);
     }
@@ -260,4 +320,5 @@ document.getElementById('loadSave').addEventListener('click', () => {
     if (item === null) return false;
     board.hexes = JSON.parse(item);
     board.update();
+    displayCorners = getOptimalSetup()
 })
